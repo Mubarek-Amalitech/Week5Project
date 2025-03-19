@@ -33,7 +33,6 @@ public class UploadService {
             return s3Objects;
 
         } catch (Exception e) {
-            System.err.println("Error listing S3 objects: " + e.getMessage());
             return Collections.emptyList();
         }
     }
