@@ -23,9 +23,4 @@ public class S3Config {
          return  S3Client.builder().region(Region.US_EAST_1).credentialsProvider(StaticCredentialsProvider.create(credentials)).build();
      }
 
-     @Bean
-    public  Helper gethelper(){
-        return  new Helper();
-
-     }
 }

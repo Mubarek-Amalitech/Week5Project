@@ -1,6 +1,7 @@
 package com.app.awsweek5project.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.app.awsweek5project.DTO.ImageDTO;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,24 +19,12 @@ public class BucketsOperationService {
     private final S3Client s3Client;
     private final Helper helper;
 
+
     public BucketsOperationService(S3Client s3Client , Helper helper ) {
         this.s3Client = s3Client;
         this.helper = helper;
-        if (!bucketExists()) {
-            s3Client.createBucket((request) -> request.bucket(helper.S3BucketName()));
-        }
     }
 
-    boolean bucketExists() {
-
-
-        try {
-            s3Client.headBucket((request) -> request.bucket(helper.S3BucketName()));
-            return true;
-        } catch (NoSuchBucketException e) {
-            return false;
-        }
-    }
 
     public void  addObject(MultipartFile file, String key) throws IOException {
         PutObjectRequest putObjectRequest = PutObjectRequest.builder().bucket(helper.S3BucketName()).key(key).build();
