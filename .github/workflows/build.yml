@@ -28,7 +28,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
       - name: Build, tag, and push image to Amazon ECR
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REGISTRY: public.ecr.aws/k8g5g0y1
           ECR_REPOSITORY: my-springboot-app
           IMAGE_TAG: ${{ github.sha }}
         run: |
