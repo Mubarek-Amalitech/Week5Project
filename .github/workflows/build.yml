@@ -2,31 +2,49 @@ name: Build and Push to ECR
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main, master ]
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up JDK 17
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Java (required for Maven build)
+      - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
+          java-version: '17' # Use the correct Java version for your project
           distribution: 'temurin'
+
+      # Step 3: Build the JAR file using Maven
       - name: Build with Maven
-        run: mvn clean package -DskipTests
-      - name: Configure AWS Credentials
+        run: mvn package -DskipTests
+
+      # Step 4: Debug the target directory (optional)
+      - name: Debug target directory
+        run: ls -R target
+
+      # Step 5: Configure AWS credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-      - name: Login to Amazon ECR
-        id: login-ecr
+
+      # Step 6: Login to Amazon ECR Public
+      - name: Login to Amazon ECR Public
+        id: login-ecr-public
         uses: aws-actions/amazon-ecr-login@v1
-      - name: Build, tag, and push image to Amazon ECR
+        with:
+          registry-type: public
+
+      # Step 7: Build, tag, and push the Docker image
+      - name: Build, tag, and push image to Amazon ECR Public
         env:
           ECR_REGISTRY: public.ecr.aws/k8g5g0y1
           ECR_REPOSITORY: my-springboot-app
