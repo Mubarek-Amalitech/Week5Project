@@ -24,6 +24,8 @@ public class UploadService {
         this.s3Config = s3Config;
     }
 
+
+
     public void  uploadImage(MultipartFile file, String key) throws IOException {
         bucketsOperationService.addObject(file, key);
     }

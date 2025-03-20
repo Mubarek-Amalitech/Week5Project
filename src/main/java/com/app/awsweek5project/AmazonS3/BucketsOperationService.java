@@ -13,7 +13,7 @@ import java.util.Optional;
 @Component
 public class BucketsOperationService {
     private  final S3Config s3Config;
-    private final String  bucketName = "bucketName";
+    private final String  bucketName = "awsweek5labbucket";
 
 
     public BucketsOperationService( S3Config s3Config  ) {
