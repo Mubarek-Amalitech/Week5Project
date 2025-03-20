@@ -69,7 +69,7 @@ jobs:
           # Get the new task definition ARN
           echo "TASK_DEF_ARN=$(jq -r '.taskDefinition.taskDefinitionArn' new-task-def.json)" >> $GITHUB_ENV
 
-      # Step 9: Create AppSpec File for CodeDeploy
+      # Step 9: Create AppSpec File
       - name: Create AppSpec File
         run: |
           cat << EOF > appspec.yaml
@@ -84,12 +84,21 @@ jobs:
                     ContainerPort: 8080
           EOF
 
-      # Step 10: Deploy to CodeDeploy
+      # Step 10: Install yq to convert YAML to JSON
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      # Step 11: Convert AppSpec to JSON and Deploy to CodeDeploy
       - name: Deploy to CodeDeploy
         run: |
+          # Convert appspec.yaml to JSON
+          APPSPEC_JSON=$(yq eval -o=json appspec.yaml)
+          # Create the deployment with the JSON AppSpec content
           aws deploy create-deployment \
             --application-name MySpringBootApp \
             --deployment-group-name MyDeploymentGroup \
             --deployment-config-name CodeDeployDefault.ECSAllAtOnce \
-            --revision revisionType=AppSpecContent,appSpecContent='$(cat appspec.yaml)' \
+            --revision revisionType=AppSpecContent,appSpecContent="$APPSPEC_JSON" \
             --region ${{ secrets.AWS_REGION }}
