@@ -1,33 +1,96 @@
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ecr-public:PutImage",
-        "ecr-public:InitiateLayerUpload",
-        "ecr-public:UploadLayerPart",
-        "ecr-public:CompleteLayerUpload",
-        "ecr-public:BatchCheckLayerAvailability",
-        "sts:GetServiceBearerToken"
-      ],
-      "Resource": "*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ecs:DescribeTaskDefinition",
-        "ecs:RegisterTaskDefinition"
-      ],
-      "Resource": "*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "codedeploy:CreateDeployment",
-        "codedeploy:GetDeployment"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
+name: Build, Push to ECR, and Deploy to ECS
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Java (required for Maven build)
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17' # Use the correct Java version for your project
+          distribution: 'temurin'
+
+      # Step 3: Build the JAR file using Maven
+      - name: Build with Maven
+        run: mvn package -DskipTests
+
+      # Step 4: Debug the target directory (optional)
+      - name: Debug target directory
+        run: ls -R target
+
+      # Step 5: Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Step 6: Login to Amazon ECR Public
+      - name: Login to Amazon ECR Public
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry-type: public
+
+      # Step 7: Build, tag, and push the Docker image to Amazon ECR Public
+      - name: Build, tag, and push image to Amazon ECR Public
+        env:
+          ECR_REGISTRY: public.ecr.aws/k8g5g0y1
+          ECR_REPOSITORY: my-springboot-app
+          IMAGE_TAG: awsweek5project-${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      # Step 8: Create a new Task Definition revision
+      - name: Create new Task Definition
+        run: |
+          # Get the current task definition
+          aws ecs describe-task-definition \
+            --task-definition my-springboot-app \
+            --region ${{ secrets.AWS_REGION }} > task-def.json
+          # Update the image in the task definition
+          jq '.taskDefinition | .containerDefinitions[0].image = "public.ecr.aws/k8g5g0y1/my-springboot-app:awsweek5project-${{ github.sha }}"' task-def.json > updated-task-def.json
+          # Register the new task definition
+          aws ecs register-task-definition \
+            --family my-springboot-app \
+            --cli-input-json file://updated-task-def.json \
+            --region ${{ secrets.AWS_REGION }} > new-task-def.json
+          # Get the new task definition ARN
+          echo "TASK_DEF_ARN=$(jq -r '.taskDefinition.taskDefinitionArn' new-task-def.json)" >> $GITHUB_ENV
+
+      # Step 9: Create AppSpec File for CodeDeploy
+      - name: Create AppSpec File
+        run: |
+          cat << EOF > appspec.yaml
+          version: 0.0
+          Resources:
+            - TargetService:
+                Type: AWS::ECS::Service
+                Properties:
+                  TaskDefinition: "${{ env.TASK_DEF_ARN }}"
+                  LoadBalancerInfo:
+                    ContainerName: "springboot-app"
+                    ContainerPort: 8080
+          EOF
+
+      # Step 10: Deploy to CodeDeploy
+      - name: Deploy to CodeDeploy
+        run: |
+          aws deploy create-deployment \
+            --application-name MySpringBootApp \
+            --deployment-group-name MyDeploymentGroup \
+            --deployment-config-name CodeDeployDefault.ECSAllAtOnce \
+            --revision revisionType=AppSpecContent,appSpecContent='$(cat appspec.yaml)' \
+            --region ${{ secrets.AWS_REGION }}
