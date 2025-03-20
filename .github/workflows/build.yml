@@ -97,18 +97,21 @@ jobs:
           yq eval -o=json appspec.yaml > appspec.json
           # JSON-encode the AppSpec content as a string
           APPSPEC_CONTENT=$(jq -c . appspec.json)
-          # Compute the SHA256 hash of the content (optional, but recommended)
+          # Compute the SHA256 hash of the content
           APPSPEC_SHA256=$(echo -n "$APPSPEC_CONTENT" | sha256sum | awk '{print $1}')
-          # Create a revision JSON file with the correct structure
-          cat << EOF > revision.json
-          {
-            "revisionType": "AppSpecContent",
-            "appSpecContent": {
-              "content": "$APPSPEC_CONTENT",
-              "sha256": "$APPSPEC_SHA256"
-            }
-          }
-          EOF
+          # Create revision.json using jq to ensure valid JSON
+          jq -n \
+            --arg content "$APPSPEC_CONTENT" \
+            --arg sha256 "$APPSPEC_SHA256" \
+            '{
+              "revisionType": "AppSpecContent",
+              "appSpecContent": {
+                "content": $content,
+                "sha256": $sha256
+              }
+            }' > revision.json
+          # Debug: Print revision.json to verify its contents
+          cat revision.json
           # Create the deployment using the revision file
           aws deploy create-deployment \
             --application-name MySpringBootApp \
