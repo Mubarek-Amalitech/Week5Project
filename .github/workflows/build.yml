@@ -95,11 +95,18 @@ jobs:
         run: |
           # Convert appspec.yaml to JSON
           yq eval -o=json appspec.yaml > appspec.json
-          # Create a revision JSON file
+          # JSON-encode the AppSpec content as a string
+          APPSPEC_CONTENT=$(jq -c . appspec.json)
+          # Compute the SHA256 hash of the content (optional, but recommended)
+          APPSPEC_SHA256=$(echo -n "$APPSPEC_CONTENT" | sha256sum | awk '{print $1}')
+          # Create a revision JSON file with the correct structure
           cat << EOF > revision.json
           {
             "revisionType": "AppSpecContent",
-            "appSpecContent": $(cat appspec.json)
+            "appSpecContent": {
+              "content": "$APPSPEC_CONTENT",
+              "sha256": "$APPSPEC_SHA256"
+            }
           }
           EOF
           # Create the deployment using the revision file
