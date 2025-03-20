@@ -94,11 +94,18 @@ jobs:
       - name: Deploy to CodeDeploy
         run: |
           # Convert appspec.yaml to JSON
-          APPSPEC_JSON=$(yq eval -o=json appspec.yaml)
-          # Create the deployment with the JSON AppSpec content
+          yq eval -o=json appspec.yaml > appspec.json
+          # Create a revision JSON file
+          cat << EOF > revision.json
+          {
+            "revisionType": "AppSpecContent",
+            "appSpecContent": $(cat appspec.json)
+          }
+          EOF
+          # Create the deployment using the revision file
           aws deploy create-deployment \
             --application-name MySpringBootApp \
             --deployment-group-name MyDeploymentGroup \
             --deployment-config-name CodeDeployDefault.ECSAllAtOnce \
-            --revision revisionType=AppSpecContent,appSpecContent="$APPSPEC_JSON" \
+            --revision file://revision.json \
             --region ${{ secrets.AWS_REGION }}
