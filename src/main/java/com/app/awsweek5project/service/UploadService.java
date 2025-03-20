@@ -14,11 +14,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class UploadService {
 
     private final BucketsOperationService bucketsOperationService;
     private final S3Config s3Config;
+
+    public UploadService(BucketsOperationService bucketsOperationService, S3Config s3Config) {
+        this.bucketsOperationService = bucketsOperationService;
+        this.s3Config = s3Config;
+    }
 
     public void  uploadImage(MultipartFile file, String key) throws IOException {
         bucketsOperationService.addObject(file, key);

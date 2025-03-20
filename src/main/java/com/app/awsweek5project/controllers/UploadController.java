@@ -11,13 +11,16 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
-
 @Controller
-@RequiredArgsConstructor
 public class UploadController {
 
     private final UploadService uploadService;
     private  final BucketsOperationService bucketsOperationService;
+
+    public UploadController(UploadService uploadService, BucketsOperationService bucketsOperationService) {
+        this.uploadService = uploadService;
+        this.bucketsOperationService = bucketsOperationService;
+    }
 
     @PostMapping("/upload")
     public String uploadImage(@RequestParam("imageFile") MultipartFile file, Model model) {

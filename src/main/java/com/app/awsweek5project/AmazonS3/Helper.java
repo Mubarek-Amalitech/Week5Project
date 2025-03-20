@@ -1,29 +1,31 @@
 package com.app.awsweek5project.AmazonS3;
+
+import lombok.Data;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
+
 @Getter
 public class Helper {
+    private  final String HTTPS= "https://";
+    private  final String domain= ".amazonaws.com";
 
-    @Value("${aws.s3-bucket}")
-    private  String s3bucketName;
-    @Value("${aws.access-key}")
-    String accessKey;
-    @Value("${aws.secret-key}")
-    String secretKey;
+    private  final String S3= ".s3.";
 
     public String S3BucketName(){
-        return s3bucketName;
+        return  "awsweek5labbucket";
+
+               // s3bucketName;
     }
 
     public  String AccessKey(){
-        return  accessKey;
+        return  "AKIAXTORPCBHGZDTXKMS";
     }
 
     public  String SecretKey(){
-        return secretKey;
+        return  "NdCQ68wJHdUy3nHTviqdcDJ39TTGuRZDBCBFEQ88";
     }
 
 }
